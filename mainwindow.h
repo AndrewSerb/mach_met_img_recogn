@@ -1,7 +1,9 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QGraphicsScene>
 #include <QMainWindow>
+#include <QGraphicsPixmapItem>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -15,7 +17,14 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+public slots:
+    void sync_scale(int);
+
 private:
     Ui::MainWindow *ui;
+
+    QImage image;
+    QGraphicsScene img_scene;
+    QGraphicsPixmapItem* img_pixmap_item;
 };
 #endif // MAINWINDOW_H
