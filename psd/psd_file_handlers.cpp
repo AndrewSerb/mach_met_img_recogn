@@ -1,9 +1,9 @@
+#include "psd_manager.h"
+
 #include <array>
 #include <algorithm>
 #include <bit>
 #include <cstring>
-
-#include "psd_manager.h"
 
 #define SIGN_8BPS (1397768760) // ASCII string "8BPS"
 
@@ -24,29 +24,6 @@ static void confirm_endianness(T& value)
         return; // system endianness is the same
 
     byteswap(value);
-}
-
-bool PsdManager::open(const char* filepath)
-{
-    FILE* file = fopen(filepath, "r");
-    if (!file)
-        return false;
-
-    int section_idx = 0;
-    SectionHandler handler = section_handlers[section_idx];
-    while (handler)
-    {
-        if (!handler(file, image))
-            break;
-
-        ++section_idx;
-        handler = section_handlers[section_idx];
-    }
-
-    fclose(file);
-    if (handler) // error in one of the handlers
-        return false;
-    return true;
 }
 
 bool PsdManager::read_file_header(FILE* file, PsdData& image)
@@ -87,8 +64,12 @@ bool PsdManager::read_file_header(FILE* file, PsdData& image)
     // the task only requires 32 bpp, which is 8 bits per channel
     if (image.depth != 8)
         return false;
-    // 2 byte color mode, skip
-    if (fseek(file, 2, SEEK_CUR))
+    // 2 byte color mode,
+    if (!fread(&image.color_mode, 2, 1, file))
+        return false;
+    confirm_endianness(image.color_mode);
+    // only RGB (value of 3) is supported
+    if (image.color_mode != 3)
         return false;
 
     return true;
@@ -213,6 +194,158 @@ bool PsdManager::read_image_data(FILE* file, PsdData& image)
     }
     default:
         return false;
+    }
+
+    return true;
+}
+
+bool PsdManager::write_file_header(FILE* file, const PsdData& image)
+{
+    // signature
+    fputs("8BPS", file);
+    // version - 0 1, big endian
+    uint8_t one_byte_buf = 0;
+    uint16_t two_byte_buf = 0;
+    uint32_t four_byte_buf = 0;
+    fwrite(&one_byte_buf, 1, 1, file);
+    one_byte_buf = 1;
+    fwrite(&one_byte_buf, 1, 1, file);
+    // 6 reserved
+    one_byte_buf = 0;
+    fwrite(&one_byte_buf, 1, 6, file);
+    // 2 byte number of channels - big endian
+    two_byte_buf = image.n_channels;
+    confirm_endianness(two_byte_buf);
+    fwrite(&two_byte_buf, 2, 1, file);
+    // 4 byte height - big endian
+    four_byte_buf = image.height;
+    confirm_endianness(four_byte_buf);
+    fwrite(&four_byte_buf, 4, 1, file);
+    // 4 byte width - big endian
+    four_byte_buf = image.width;
+    confirm_endianness(four_byte_buf);
+    fwrite(&four_byte_buf, 4, 1, file);
+    // 2 byte depth - big endian
+    two_byte_buf = image.depth;
+    confirm_endianness(two_byte_buf);
+    fwrite(&two_byte_buf, 2, 1, file);
+    // 2 byte color mode - big endian
+    two_byte_buf = image.color_mode;
+    confirm_endianness(two_byte_buf);
+    fwrite(&two_byte_buf, 2, 1, file);
+
+    return true;
+}
+
+bool PsdManager::write_color_mode_data(FILE* file, const PsdData&)
+{
+    // write as empty, 4 byte length of 0
+    uint32_t zero = 0;
+    fwrite(&zero, 4, 1, file);
+
+    return true;
+}
+
+bool PsdManager::write_image_resources(FILE* file, const PsdData&)
+{
+    // write as empty, 4 byte length of 0
+    uint32_t zero = 0;
+    fwrite(&zero, 4, 1, file);
+
+    return true;
+}
+
+bool PsdManager::write_layer_and_mask_info(FILE* file, const PsdData&)
+{
+    // write as empty, 4 byte length of 0
+    uint32_t zero = 0;
+    fwrite(&zero, 4, 1, file);
+
+    return true;
+}
+
+bool PsdManager::write_image_data(FILE* file, const PsdData& image)
+{
+    // 2 byte compression method
+    // at this point only 1 value could be used here
+    PsdData::Compression compr = PsdData::PSD_COMPR_RLE;
+    confirm_endianness(compr);
+    fwrite(&compr, 2, 1, file);
+
+    // 2 byte data lengths per row per channel
+    // since these need to be written before the data itself, the data
+    // should be encoded before determining its length
+    uint64_t rows_lengths_count = image.height * image.n_channels;
+    uint16_t row_len = 0;
+    // leave blank and move file pointer back after determining lengths
+    fpos_t lengths_section;
+    fgetpos(file, &lengths_section);
+
+    fwrite(&row_len, 2, rows_lengths_count, file);
+
+    // RLE encoded rows
+    uint8_t run_length = 0;
+    uint8_t color_value = 0;
+    int8_t marker = 0;
+    size_t idx = 0;
+
+    for (auto& channel : image.channels_data)
+    {
+        idx = 0;
+
+        for (int r = 0, c = 0; r < image.height; ++r)
+        {
+            row_len = 0;
+            c = 0;
+
+            while (c < image.width)
+            {
+                // count amount of the same consecutive values
+                run_length = 1;
+                color_value = channel[idx++];
+                ++c;
+
+                while (color_value == channel[idx] && c < image.width
+                    && run_length <= 127)
+                {
+                    ++idx;
+                    ++c;
+                    ++run_length;
+                }
+
+                if (run_length > 1)
+                {
+                    // repeat `color_value` `run_length` times
+                    marker = 1 - run_length;
+                    fwrite(&marker, 1, 1, file);
+                    fwrite(&color_value, 1, 1, file);
+                    row_len += 2;
+                }
+                else
+                {
+                    size_t start_idx = idx - 1;
+                    // count amount of consecutive unique values
+                    while (color_value != channel[idx] && c < image.width
+                        && run_length <= 128)
+                    {
+                        color_value = channel[idx++];
+                        ++c;
+                        ++run_length;
+                    }
+                    // write `run_length` unique values
+                    marker = run_length - 1;
+                    fwrite(&marker, 1, 1, file);
+                    fwrite(&channel[start_idx], 1, run_length, file);
+                    row_len += run_length + 1;
+                }
+            }
+
+            fsetpos(file, &lengths_section);
+            confirm_endianness(row_len);
+            fwrite(&row_len, 2, 1, file);
+            fgetpos(file, &lengths_section);
+            fseek(file, 0, SEEK_END);
+        }
     }
 
     return true;

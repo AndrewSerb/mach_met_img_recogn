@@ -12,13 +12,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
+set(UI_SOURCES
+    ui/mainwindow.cpp
+    ui/mainwindow.h
+    ui/mainwindow.ui
+)
+
+set(PSD_SOURCES
+    psd/psd_manager.h
+    psd/psd_file_handlers.cpp
+    psd/psd_manager.cpp
+)
+
 set(PROJECT_SOURCES
-        psd_manager.h
-        psd_manager.cpp
+        ${PSD_SOURCES}
+        ${UI_SOURCES}
         main.cpp
-        mainwindow.cpp
-        mainwindow.h
-        mainwindow.ui
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
