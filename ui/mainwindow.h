@@ -5,7 +5,7 @@
 #include <QMainWindow>
 #include <QGraphicsPixmapItem>
 
-#include "psd_manager.h"
+#include "../psd/psd_manager.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -22,6 +22,10 @@ public:
 public slots:
     void sync_scale(int);
     void open_file();
+    void save_file();
+    void save_file_as();
+
+    void test_set_red_80();
 
 private:
     Ui::MainWindow *ui;

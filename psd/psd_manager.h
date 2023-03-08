@@ -27,6 +27,7 @@ struct PsdData
     uint32_t height;            // [1, 30000], also called "rows"
     uint32_t width;             // [1, 30000], also called "collumns"
     uint16_t depth;             // bits per channel
+    uint16_t color_mode;        // [0, 9], only 3 (RGB) is supported
     std::vector<std::vector<uint8_t>> channels_data;
 };
 
@@ -37,14 +38,21 @@ public:
     virtual ~PsdManager() = default;
 
     bool open(const char* filepath);
+    bool save() const;
 
     inline PsdData& get_image()
     {
         return image;
     }
 
+    inline void set_save_path(const char* path)
+    {
+        this->path = path;
+    }
+
 private:
     PsdData image;
+    std::string path;
 
     static bool read_file_header(FILE*, PsdData&);
     static bool read_color_mode_data(FILE*, PsdData&);
@@ -52,15 +60,32 @@ private:
     static bool read_layer_and_mask_info(FILE*, PsdData&);
     static bool read_image_data(FILE*, PsdData&);
 
-    typedef bool (*SectionHandler)(FILE*, PsdData&);
+    static bool write_file_header(FILE*, const PsdData&);
+    static bool write_color_mode_data(FILE*, const PsdData&);
+    static bool write_image_resources(FILE*, const PsdData&);
+    static bool write_layer_and_mask_info(FILE*, const PsdData&);
+    static bool write_image_data(FILE*, const PsdData&);
 
-    static constexpr SectionHandler section_handlers[] =
+    typedef bool (*SectionReader)(FILE*, PsdData&);
+    typedef bool (*SectionWriter)(FILE*, const PsdData&);
+
+    static constexpr SectionReader section_readers[] =
     {
         read_file_header,
         read_color_mode_data,
         read_image_resources,
         read_layer_and_mask_info,
         read_image_data,
+        nullptr
+    };
+
+    static constexpr SectionWriter section_writers[] =
+    {
+        write_file_header,
+        write_color_mode_data,
+        write_image_resources,
+        write_layer_and_mask_info,
+        write_image_data,
         nullptr
     };
 };
