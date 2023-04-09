@@ -24,19 +24,31 @@ struct PsdData
         PSD_COMPR_ZIP_PREDICT
     };
 
+    enum ColorMode : uint16_t
+    {
+        GRAYSCALE = 1,
+        RGB = 3
+    };
+
     Compression compression;
     ImageData image;
     uint16_t& n_channels;       // [1, 24]
     uint32_t& height;           // [1, 30000], also called "rows"
     uint32_t& width;            // [1, 30000], also called "collumns"
     uint16_t depth;             // bits per channel
-    uint16_t color_mode;        // [0, 9], only 3 (RGB) is supported
+    ColorMode color_mode;       // [0, 9], only 1 (Grayscale) and 3 (RGB) are supported
     std::vector<std::vector<uint8_t>>& channels_data;
 
     PsdData();
+
     inline ImageData& get_raw()
     {
         return image;
+    }
+
+    inline void set_color_mode(ColorMode mode)
+    {
+        color_mode = mode;
     }
 };
 

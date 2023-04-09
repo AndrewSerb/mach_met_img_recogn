@@ -1,74 +1,18 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
-#include "./mainwindow.h"
+#include "mainwindow.h"
+
 #include "./ui_mainwindow.h"
+#include "../processing/common_processors.h"
 #include "../processing/test_make_red_proc.h"
 
-// ===== local UI utility structs =====
-static struct
-{
-    const int min = 1;
-    const int max = 100;
-    const int default_value = min;
-    QSpinBox* spinbox = nullptr;
-    QSlider* slider = nullptr;
+#include "utility_ctx.h"
 
-    inline void sync_fields(int& value)
-    {
-        if (value > max)
-            value = max;
-        else if (value < min)
-            value = min;
+using namespace ui_context;
 
-        slider->setValue(value);
-        spinbox->setValue(value);
-    }
-} scale_ctx;
-
-static struct
-{
-    QWidget* widget_img_info;
-    QAction* action_save_as;
-    QAction* action_save;
-
-    inline void no_img()
-    {
-        widget_img_info->setVisible(false);
-        action_save_as->setEnabled(false);
-        action_save->setEnabled(false);
-    }
-
-    inline void img_opened()
-    {
-        widget_img_info->setVisible(true);
-        action_save_as->setEnabled(true);
-        action_save->setEnabled(false);
-    }
-
-    inline void img_saved()
-    {
-        widget_img_info->setVisible(true);
-        action_save_as->setEnabled(true);
-        action_save->setEnabled(true);
-    }
-} visibility_ctx;
-
-static struct
-{
-    QLabel* label_width;
-    QLabel* label_height;
-    QLabel* label_depth;
-    QLabel* label_channels;
-
-    void set(const PsdData& img)
-    {
-        label_width->setText(QString::number(img.width));
-        label_height->setText(QString::number(img.height));
-        label_depth->setText(QString::number(img.depth));
-        label_channels->setText(QString::number(img.n_channels));
-    }
-} img_info_ctx;
+static SliderSpinboxSyncCtx duotone_split_ctx(0, 255, 127);
+static PixmapScaleCtx scale_ctx(0, 100, 0);
 
 // ===== local ImageData to Qt's QRgb struct mappers =====
 typedef QRgb (*rgb_mapper)(const ImageData& img, uint64_t idx);
@@ -85,11 +29,20 @@ static QRgb to_rgba(const ImageData& img, uint64_t idx)
         img.channels_data[2][idx], img.channels_data[3][idx]);
 }
 
+static QRgb to_gray(const ImageData& img, uint64_t idx)
+{
+    return qRgb(img.channels_data[0][idx], img.channels_data[0][idx],
+        img.channels_data[0][idx]);
+}
+
 static void map_image(const ImageData& raw_img, QImage& q_img)
 {
     rgb_mapper map_pixel;
     switch (raw_img.n_channels)
     {
+    case 1:
+        map_pixel = to_gray;
+        break;
     case 3:
         map_pixel = to_rgb;
         break;
@@ -122,33 +75,55 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-//    processors[TEST_RED_80_PERCENT] = std::make_unique<ImageProcessor>(new MakeRed80Percent());
     processors.emplace(TEST_RED_80_PERCENT, new MakeRed80Percent());
+    processors.emplace(GRAYSCALE, new Grayscale());
 
     scale_ctx.slider = ui->slider_scale;
     scale_ctx.spinbox = ui->spinbox_scale;
+    scale_ctx.pixmap = &img_pixmap_item;
 
-    scale_ctx.spinbox->setMinimum(scale_ctx.min);
-    scale_ctx.spinbox->setMaximum(scale_ctx.max);
-    scale_ctx.slider->setMinimum(scale_ctx.min);
-    scale_ctx.slider->setMaximum(scale_ctx.max);
-    sync_scale(scale_ctx.default_value);
+    scale_ctx.spinbox->setMinimum(scale_ctx.get_min());
+    scale_ctx.spinbox->setMaximum(scale_ctx.get_max());
+    scale_ctx.slider->setMinimum(scale_ctx.get_min());
+    scale_ctx.slider->setMaximum(scale_ctx.get_max());
+    scale_ctx.sync(scale_ctx.get_default_value());
+
+    duotone_split_ctx.slider = ui->slider_duotone;
+    duotone_split_ctx.spinbox = ui->spinBox_duotone;
+
+    duotone_split_ctx.spinbox->setMinimum(duotone_split_ctx.get_min());
+    duotone_split_ctx.spinbox->setMaximum(duotone_split_ctx.get_max());
+    duotone_split_ctx.slider->setMinimum(duotone_split_ctx.get_min());
+    duotone_split_ctx.slider->setMaximum(duotone_split_ctx.get_max());
+    duotone_split_ctx.sync(duotone_split_ctx.get_default_value());
 
     visibility_ctx.widget_img_info = ui->widget_img_info;
+    visibility_ctx.widget_toolbox = ui->tools_tabs;
     visibility_ctx.action_save = ui->actionSave;
     visibility_ctx.action_save_as = ui->actionSave_as;
     visibility_ctx.no_img();
+
+    duotone_visibility_ctx.widget_preview = ui->groupBox_duotone_preview;
+    duotone_visibility_ctx.button_duotone = ui->button_duotone_preview;
+    duotone_visibility_ctx.end_preview();
 
     img_info_ctx.label_width = ui->label_width_data;
     img_info_ctx.label_height = ui->label_height_data;
     img_info_ctx.label_depth = ui->label_depth_data;
     img_info_ctx.label_channels = ui->label_channels_data;
 
+    // utility contexts
     QObject::connect(scale_ctx.slider, &QSlider::valueChanged,
-        this, &MainWindow::sync_scale);
+        &scale_ctx, &PixmapScaleCtx::sync);
     QObject::connect(scale_ctx.spinbox, &QSpinBox::valueChanged,
-        this, &MainWindow::sync_scale);
+        &scale_ctx, &PixmapScaleCtx::sync);
 
+    QObject::connect(duotone_split_ctx.slider, &QSlider::valueChanged,
+        &duotone_split_ctx, &SliderSpinboxSyncCtx::sync);
+    QObject::connect(duotone_split_ctx.spinbox, &QSpinBox::valueChanged,
+        &duotone_split_ctx, &SliderSpinboxSyncCtx::sync);
+
+    // menu items
     QObject::connect(ui->actionOpen, &QAction::triggered,
         this, &MainWindow::open_file);
     QObject::connect(ui->actionSave, &QAction::triggered,
@@ -156,8 +131,18 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(ui->actionSave_as, &QAction::triggered,
         this, &MainWindow::save_file_as);
 
+    // processing events
     QObject::connect(ui->actionTest_Set_Red, &QAction::triggered,
         this, &MainWindow::test_set_red_80);
+    QObject::connect(ui->button_grayscale, &QAbstractButton::pressed,
+        this, &MainWindow::grayscale);
+
+    QObject::connect(ui->button_duotone_preview, &QAbstractButton::pressed,
+        this, &MainWindow::duotone_start);
+    QObject::connect(ui->button_duotone_done, &QAbstractButton::pressed,
+        this, &MainWindow::duotone_done);
+    QObject::connect(ui->button_duotone_cancel, &QAbstractButton::pressed,
+        this, &MainWindow::duotone_cancel);
 }
 
 MainWindow::~MainWindow()
@@ -179,13 +164,6 @@ void MainWindow::draw_image()
     img_info_ctx.set(psd_manager.get_image());
 
     ui->image_box->setScene(&img_scene);
-}
-
-void MainWindow::sync_scale(int value)
-{
-    scale_ctx.sync_fields(value);
-
-    this->img_pixmap_item->setScale(value);// TODO: works a bit weird
 }
 
 void MainWindow::open_file()
@@ -236,4 +214,32 @@ void MainWindow::test_set_red_80()
 
     if (processors[TEST_RED_80_PERCENT]->process(img.get_raw()))
         draw_image();
+}
+
+void MainWindow::grayscale()
+{
+    PsdData& img = psd_manager.get_image();
+
+    if (processors[GRAYSCALE]->process(img.get_raw()))
+    {
+        img.set_color_mode(PsdData::ColorMode::GRAYSCALE);
+        draw_image();
+    }
+}
+
+void MainWindow::duotone_start()
+{
+    duotone_visibility_ctx.start_preview();
+}
+
+void MainWindow::duotone_done()
+{
+    qDebug("duotone done");
+    duotone_visibility_ctx.end_preview();
+}
+
+void MainWindow::duotone_cancel()
+{
+    qDebug("duotone cancel");
+    duotone_visibility_ctx.end_preview();
 }

@@ -68,8 +68,8 @@ bool PsdManager::read_file_header(FILE* file, PsdData& image)
     if (!fread(&image.color_mode, 2, 1, file))
         return false;
     confirm_endianness(image.color_mode);
-    // only RGB (value of 3) is supported
-    if (image.color_mode != 3)
+    // only Grayscale and RGB are supported
+    if (image.color_mode != 1 && image.color_mode != 3)
         return false;
 
     return true;
