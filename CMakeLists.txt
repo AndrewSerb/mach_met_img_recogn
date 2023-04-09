@@ -18,6 +18,10 @@ set(UI_SOURCES
     ui/mainwindow.ui
 )
 
+set(PROCESSING_SOURCES
+    processing/image.h
+)
+
 set(PSD_SOURCES
     psd/psd_manager.h
     psd/psd_file_handlers.cpp
@@ -25,9 +29,10 @@ set(PSD_SOURCES
 )
 
 set(PROJECT_SOURCES
-        ${PSD_SOURCES}
-        ${UI_SOURCES}
-        main.cpp
+    ${PROCESSING_SOURCES}
+    ${PSD_SOURCES}
+    ${UI_SOURCES}
+    main.cpp
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

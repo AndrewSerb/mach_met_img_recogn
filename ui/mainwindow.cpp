@@ -69,25 +69,25 @@ static struct
     }
 } img_info_ctx;
 
-// ===== local PsdData to Qt's QRgb struct mappers =====
-typedef QRgb (*rgb_mapper)(const PsdData& img, uint64_t idx);
+// ===== local ImageData to Qt's QRgb struct mappers =====
+typedef QRgb (*rgb_mapper)(const ImageData& img, uint64_t idx);
 
-static QRgb to_rgb(const PsdData& img, uint64_t idx)
+static QRgb to_rgb(const ImageData& img, uint64_t idx)
 {
     return qRgb(img.channels_data[0][idx], img.channels_data[1][idx],
         img.channels_data[2][idx]);
 }
 
-static QRgb to_rgba(const PsdData& img, uint64_t idx)
+static QRgb to_rgba(const ImageData& img, uint64_t idx)
 {
     return qRgba(img.channels_data[0][idx], img.channels_data[1][idx],
         img.channels_data[2][idx], img.channels_data[3][idx]);
 }
 
-static void map_image(const PsdData& psd_img, QImage& q_img)
+static void map_image(const ImageData& raw_img, QImage& q_img)
 {
     rgb_mapper map_pixel;
-    switch (psd_img.n_channels)
+    switch (raw_img.n_channels)
     {
     case 3:
         map_pixel = to_rgb;
@@ -107,7 +107,7 @@ static void map_image(const PsdData& psd_img, QImage& q_img)
         QRgb *line = reinterpret_cast<QRgb*>(q_img.scanLine(r));
         for (int c = 0; c < width; ++c)
         {
-            line[c] = map_pixel(psd_img, r * width + c);
+            line[c] = map_pixel(raw_img, r * width + c);
         }
     }
 }
@@ -163,16 +163,16 @@ MainWindow::~MainWindow()
 
 void MainWindow::draw_image()
 {
-    PsdData& psd_img = psd_manager.get_image();
-    if (image.height() != psd_img.height || image.width() != psd_img.width)
-        image = QImage(psd_img.width, psd_img.height, QImage::Format_ARGB32);
+    ImageData& raw_img = psd_manager.get_image().get_raw();
+    if (image.height() != raw_img.height || image.width() != raw_img.width)
+        image = QImage(raw_img.width, raw_img.height, QImage::Format_ARGB32);
 
-    map_image(psd_img, image);
+    map_image(raw_img, image);
 
     img_scene.clear();
     img_pixmap_item = img_scene.addPixmap(QPixmap::fromImage(image));
 
-    img_info_ctx.set(psd_img);
+    img_info_ctx.set(psd_manager.get_image());
 
     ui->image_box->setScene(&img_scene);
 }
