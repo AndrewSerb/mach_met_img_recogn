@@ -3,6 +3,7 @@
 
 #include "./mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "../processing/test_make_red_proc.h"
 
 // ===== local UI utility structs =====
 static struct
@@ -121,6 +122,9 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+//    processors[TEST_RED_80_PERCENT] = std::make_unique<ImageProcessor>(new MakeRed80Percent());
+    processors.emplace(TEST_RED_80_PERCENT, new MakeRed80Percent());
+
     scale_ctx.slider = ui->slider_scale;
     scale_ctx.spinbox = ui->spinbox_scale;
 
@@ -230,8 +234,6 @@ void MainWindow::test_set_red_80()
 {
     PsdData& img = psd_manager.get_image();
 
-    std::vector<uint8_t>& red = img.channels_data[0];
-    std::fill(red.begin(), red.end(), 205);
-
-    draw_image();
+    if (processors[TEST_RED_80_PERCENT]->process(img.get_raw()))
+        draw_image();
 }

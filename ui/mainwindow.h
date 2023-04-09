@@ -6,6 +6,7 @@
 #include <QGraphicsPixmapItem>
 
 #include "../psd/psd_manager.h"
+#include "../processing/processor_api.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -28,6 +29,11 @@ public slots:
     void test_set_red_80();
 
 private:
+    enum ProcessorType
+    {
+        TEST_RED_80_PERCENT
+    };
+
     Ui::MainWindow *ui;
 
     QImage image;
@@ -35,6 +41,8 @@ private:
     QGraphicsPixmapItem* img_pixmap_item;
 
     PsdManager psd_manager;
+
+    std::map<ProcessorType, std::unique_ptr<ImageProcessor>> processors;
 
     void draw_image();
 };

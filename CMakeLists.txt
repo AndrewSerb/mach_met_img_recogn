@@ -20,6 +20,9 @@ set(UI_SOURCES
 
 set(PROCESSING_SOURCES
     processing/image.h
+    processing/processor_api.h
+    processing/test_make_red_proc.h
+    processing/test_make_red_proc.cpp
 )
 
 set(PSD_SOURCES
