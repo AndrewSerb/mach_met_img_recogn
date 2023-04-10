@@ -2,6 +2,9 @@
 #define PROCESSOR_API
 #include "image.h"
 
+// TODO: could implement "command" pattern instead, to discontinue a mirroring
+// "ProcCtx" hierarchy for history saving. but i'm not gonna bother
+
 class ImageProcessor
 {
 public:
@@ -10,7 +13,7 @@ public:
 
     virtual bool process(ImageData& image)
     {
-        return true;
+        return false;
     };
 };
 

@@ -1,6 +1,6 @@
 #ifndef TEST_MAKE_RED_PROC
 #define TEST_MAKE_RED_PROC
-#include "processor_api.h"
+#include "../processor_api.h"
 
 class MakeRed80Percent : public ImageProcessor
 {

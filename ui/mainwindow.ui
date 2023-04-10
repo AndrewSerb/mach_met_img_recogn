@@ -42,6 +42,18 @@
           <property name="acceptDrops">
            <bool>false</bool>
           </property>
+          <property name="sizeAdjustPolicy">
+           <enum>QAbstractScrollArea::AdjustToContents</enum>
+          </property>
+          <property name="cacheMode">
+           <set>QGraphicsView::CacheBackground</set>
+          </property>
+          <property name="resizeAnchor">
+           <enum>QGraphicsView::AnchorViewCenter</enum>
+          </property>
+          <property name="viewportUpdateMode">
+           <enum>QGraphicsView::FullViewportUpdate</enum>
+          </property>
          </widget>
         </item>
         <item>
@@ -58,9 +70,17 @@
           <property name="currentIndex">
            <number>0</number>
           </property>
-          <widget class="QWidget" name="tab_preprocessing" native="true">
+          <widget class="QWidget" name="tab_preprocessing">
            <property name="enabled">
             <bool>true</bool>
+           </property>
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>-184</y>
+             <width>316</width>
+             <height>647</height>
+            </rect>
            </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -71,11 +91,11 @@
            <attribute name="label">
             <string>Preprocessing</string>
            </attribute>
-           <layout class="QHBoxLayout" name="horizontalLayout_4">
+           <layout class="QVBoxLayout" name="verticalLayout_preprocessing" stretch="0,0,0,10">
             <item>
              <widget class="QGroupBox" name="groupBox_grayscale">
               <property name="title">
-               <string>Grayscale</string>
+               <string>Grayscale &amp;&amp; Duotone</string>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_2">
                <property name="spacing">
@@ -198,11 +218,194 @@
                  </layout>
                 </widget>
                </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_preproc_text">
+              <property name="title">
+               <string>Text</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_5">
                <item>
-                <widget class="QWidget" name="widget_spacer_grayscale" native="true"/>
+                <widget class="QPushButton" name="button_fill">
+                 <property name="text">
+                  <string>Fill holes</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="groupBox_directional_edit">
+                 <property name="title">
+                  <string>Directional processing</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="0,0">
+                  <property name="spacing">
+                   <number>3</number>
+                  </property>
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item>
+                   <layout class="QVBoxLayout" name="verticalLayout_6">
+                    <item>
+                     <widget class="QRadioButton" name="radioButton_thin">
+                      <property name="text">
+                       <string>Thin</string>
+                      </property>
+                      <property name="checked">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QRadioButton" name="radioButton_cleanup">
+                      <property name="text">
+                       <string>Clean up</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0" columnstretch="0,0,0">
+                    <property name="sizeConstraint">
+                     <enum>QLayout::SetFixedSize</enum>
+                    </property>
+                    <item row="3" column="1">
+                     <widget class="QPushButton" name="button_thin_bottom">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+                        <horstretch>2</horstretch>
+                        <verstretch>1</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="text">
+                       <string>bottom</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="1">
+                     <widget class="QWidget" name="widget_spacer_thin_buttons_1" native="true">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+                        <horstretch>2</horstretch>
+                        <verstretch>1</verstretch>
+                       </sizepolicy>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="1">
+                     <widget class="QPushButton" name="button_thin_top">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+                        <horstretch>2</horstretch>
+                        <verstretch>1</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="text">
+                       <string>top</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="0">
+                     <widget class="QWidget" name="widget_spacer_thin_buttons_2" native="true">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+                        <horstretch>2</horstretch>
+                        <verstretch>1</verstretch>
+                       </sizepolicy>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="2">
+                     <widget class="QWidget" name="widget_spacer_thin_buttons_3" native="true">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+                        <horstretch>2</horstretch>
+                        <verstretch>1</verstretch>
+                       </sizepolicy>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="0">
+                     <widget class="QPushButton" name="button_thin_left">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+                        <horstretch>2</horstretch>
+                        <verstretch>1</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="text">
+                       <string>left</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="2">
+                     <widget class="QPushButton" name="button_thin_right">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+                        <horstretch>2</horstretch>
+                        <verstretch>1</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="text">
+                       <string>right</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="button_trace_letters">
+                 <property name="text">
+                  <string>Trace letters</string>
+                 </property>
+                </widget>
                </item>
               </layout>
              </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_history">
+              <property name="title">
+               <string>Processing history</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_7">
+               <item>
+                <widget class="QPushButton" name="button_import_history">
+                 <property name="text">
+                  <string>Import</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QListView" name="listView"/>
+               </item>
+               <item>
+                <widget class="QPushButton" name="button_export_history">
+                 <property name="text">
+                  <string>Export</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QWidget" name="widget_spacer_preprocessing" native="true"/>
             </item>
            </layout>
           </widget>

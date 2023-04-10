@@ -1,4 +1,4 @@
-#include "common_processors.h"
+#include "../common_processors.h"
 
 // color weights taken from https://en.wikipedia.org/wiki/Grayscale
 // there will only be one grayscaled channel after the processing is done

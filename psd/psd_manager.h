@@ -71,6 +71,11 @@ public:
         this->path = path;
     }
 
+    inline const char* get_path() const
+    {
+        return path.c_str();
+    }
+
 private:
     PsdData image;
     std::string path;

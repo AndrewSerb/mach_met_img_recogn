@@ -14,6 +14,8 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
 set(UI_SOURCES
     ui/utility_ctx.h
+    ui/proc_ctx.h
+    ui/proc_ctx.cpp
     ui/mainwindow.cpp
     ui/mainwindow.h
     ui/mainwindow.ui
@@ -22,11 +24,18 @@ set(UI_SOURCES
 set(PROCESSING_SOURCES
     processing/image.h
     processing/processor_api.h
-    processing/test_make_red_proc.h
-    processing/test_make_red_proc.cpp
     processing/common_processors.h
+    processing/pixel_view.h
+    processing/pixel_view.cpp
 
-    processing/grayscale.cpp
+    processing/processors/test_make_red_proc.h
+    processing/processors/test_make_red_proc.cpp
+    processing/processors/grayscale.cpp
+    processing/processors/duotone.cpp
+    processing/processors/fill.cpp
+    processing/processors/thin_letters.cpp
+    processing/processors/irreg_cleanup.cpp
+    processing/processors/letter_finder.cpp
 )
 
 set(PSD_SOURCES

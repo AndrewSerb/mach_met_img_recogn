@@ -6,8 +6,12 @@
 #include "qlabel.h"
 #include "qslider.h"
 #include "qspinbox.h"
+#include "qstringlistmodel.h"
 
 #include "../psd/psd_manager.h"
+
+#include "proc_ctx.h"
+
 namespace ui_context
 {
 struct SliderSpinboxSyncCtx : public QObject
@@ -37,6 +41,8 @@ public:
             this->default_value = this->min;
         else
             this->default_value = default_value;
+
+        last_value = default_value;
     }
 
     inline int get_min() const
@@ -54,6 +60,11 @@ public:
         return default_value;
     }
 
+    inline int get_last() const
+    {
+        return last_value;
+    }
+
     Q_SLOT virtual void sync(int value)
     {
         if (value > max)
@@ -63,12 +74,19 @@ public:
 
         slider->setValue(value);
         spinbox->setValue(value);
+
+        last_value = value;
+
+        emit value_changed(value);
     }
+
+    Q_SIGNAL void value_changed(int);
 
 private:
     int min;
     int max;
     int default_value;
+    int last_value;
 };
 
 struct PixmapScaleCtx : public SliderSpinboxSyncCtx
@@ -154,6 +172,15 @@ struct
         label_channels->setText(QString::number(img.n_channels));
     }
 } img_info_ctx;
+
+struct ProcHistoryManager
+{
+    QStringListModel* model;
+    QStringList* list;
+
+    void add(const ProcCtx&);
+    void clear();
+};
 
 }
 

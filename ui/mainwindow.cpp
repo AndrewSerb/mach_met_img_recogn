@@ -1,18 +1,21 @@
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QToolTip>
+#include <QPainter>
 
 #include "mainwindow.h"
 
 #include "./ui_mainwindow.h"
 #include "../processing/common_processors.h"
-#include "../processing/test_make_red_proc.h"
+#include "../processing/processors/test_make_red_proc.h"
 
 #include "utility_ctx.h"
 
 using namespace ui_context;
 
 static SliderSpinboxSyncCtx duotone_split_ctx(0, 255, 127);
-static PixmapScaleCtx scale_ctx(0, 100, 0);
+static PixmapScaleCtx scale_ctx(1, 100, 1);
+static ProcHistoryManager history_ctx;
 
 // ===== local ImageData to Qt's QRgb struct mappers =====
 typedef QRgb (*rgb_mapper)(const ImageData& img, uint64_t idx);
@@ -71,12 +74,25 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
     ui(new Ui::MainWindow),
     image(),
-    img_pixmap_item(img_scene.addPixmap(QPixmap::fromImage(image)))
+    img_pixmap_item(img_scene.addPixmap(QPixmap::fromImage(image))),
+    meta_layer(image)
 {
     ui->setupUi(this);
 
+    history_str_model = new QStringListModel();
+
+    ui->listView->setModel(history_str_model);
+
+    history_ctx.list = &history_strs;
+    history_ctx.model = history_str_model;
+
     processors.emplace(TEST_RED_80_PERCENT, new MakeRed80Percent());
     processors.emplace(GRAYSCALE, new Grayscale());
+    processors.emplace(DUOTONE, new Duotone());
+    processors.emplace(FILL, new Fill());
+    processors.emplace(THIN, new ThinLetters());
+    processors.emplace(IRREG_CLEANUP, new IrregCleanup());
+    processors.emplace(TRACE_LETTERS, new LetterFinder());
 
     scale_ctx.slider = ui->slider_scale;
     scale_ctx.spinbox = ui->spinbox_scale;
@@ -131,39 +147,98 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(ui->actionSave_as, &QAction::triggered,
         this, &MainWindow::save_file_as);
 
-    // processing events
+    // == processing events
+    // testing action
     QObject::connect(ui->actionTest_Set_Red, &QAction::triggered,
         this, &MainWindow::test_set_red_80);
+    // grayscale
     QObject::connect(ui->button_grayscale, &QAbstractButton::pressed,
         this, &MainWindow::grayscale);
-
+    // duotone
     QObject::connect(ui->button_duotone_preview, &QAbstractButton::pressed,
         this, &MainWindow::duotone_start);
     QObject::connect(ui->button_duotone_done, &QAbstractButton::pressed,
         this, &MainWindow::duotone_done);
     QObject::connect(ui->button_duotone_cancel, &QAbstractButton::pressed,
         this, &MainWindow::duotone_cancel);
+    QObject::connect(&duotone_split_ctx, &SliderSpinboxSyncCtx::value_changed,
+        this, &MainWindow::duotone_try);
+    QObject::connect(&duotone_split_ctx, &SliderSpinboxSyncCtx::value_changed,
+        this, &MainWindow::duotone_try);
+    // fill holes
+    QObject::connect(ui->button_fill, &QAbstractButton::pressed,
+        this, &MainWindow::fill_holes);
+    // thin letters
+    QObject::connect(ui->button_thin_top, &QAbstractButton::pressed,
+        this, &MainWindow::thin_top);
+    QObject::connect(ui->button_thin_right, &QAbstractButton::pressed,
+        this, &MainWindow::thin_right);
+    QObject::connect(ui->button_thin_bottom, &QAbstractButton::pressed,
+        this, &MainWindow::thin_bottom);
+    QObject::connect(ui->button_thin_left, &QAbstractButton::pressed,
+        this, &MainWindow::thin_left);
+    // trace letters
+    QObject::connect(ui->button_trace_letters, &QAbstractButton::pressed,
+        this, &MainWindow::trace_letters);
+
+    // == history
+    QObject::connect(ui->button_import_history, &QAbstractButton::pressed,
+        this, &MainWindow::import_history);
+    QObject::connect(ui->button_export_history, &QAbstractButton::pressed,
+        this, &MainWindow::export_history);
 }
 
 MainWindow::~MainWindow()
 {
+    delete history_str_model;
     delete ui;
+}
+
+void MainWindow::draw_image(const ImageData& raw_img)
+{
+    if (image.height() != raw_img.height || image.width() != raw_img.width)
+    {
+        image = QImage(raw_img.width, raw_img.height, QImage::Format_ARGB32);
+        clear_meta_layer();
+    }
+
+    map_image(raw_img, image);
+
+    QPainter painter(&image);
+    painter.drawImage(0, 0, meta_layer);
+
+    img_scene.clear();
+    img_pixmap_item = img_scene.addPixmap(QPixmap::fromImage(image));
+    img_pixmap_item->setTransformOriginPoint(img_scene.sceneRect().center());
+
+    scale_ctx.sync(scale_ctx.get_last());
+    img_info_ctx.set(psd_manager.get_image());
+
+    ui->image_box->setScene(&img_scene);
+    ui->image_box->repaint();
+}
+
+void MainWindow::draw_append_meta(const LetterData& letter)
+{
+    QPainter painter(&meta_layer);
+
+    painter.setPen(QPen(Qt::red));
+    painter.drawRect(letter.top_left.x, letter.top_left.y,
+        letter.bottom_right.x - letter.top_left.x,
+        letter.bottom_right.y - letter.top_left.y);
+
+    draw_image();
+}
+
+void MainWindow::clear_meta_layer()
+{
+    meta_layer = QImage(image.width(), image.height(), QImage::Format_ARGB32);
+    meta_layer.fill(Qt::transparent);
 }
 
 void MainWindow::draw_image()
 {
-    ImageData& raw_img = psd_manager.get_image().get_raw();
-    if (image.height() != raw_img.height || image.width() != raw_img.width)
-        image = QImage(raw_img.width, raw_img.height, QImage::Format_ARGB32);
-
-    map_image(raw_img, image);
-
-    img_scene.clear();
-    img_pixmap_item = img_scene.addPixmap(QPixmap::fromImage(image));
-
-    img_info_ctx.set(psd_manager.get_image());
-
-    ui->image_box->setScene(&img_scene);
+    draw_image(psd_manager.get_image().get_raw());
 }
 
 void MainWindow::open_file()
@@ -180,6 +255,9 @@ void MainWindow::open_file()
             QMessageBox::Ok);
         return;
     }
+    proc_history.clear();
+    history_ctx.clear();
+    clear_meta_layer();
     draw_image();
 
     visibility_ctx.img_opened();
@@ -208,10 +286,11 @@ void MainWindow::save_file_as()
     save_file();
 }
 
+// preprocessing
+
 void MainWindow::test_set_red_80()
 {
     PsdData& img = psd_manager.get_image();
-
     if (processors[TEST_RED_80_PERCENT]->process(img.get_raw()))
         draw_image();
 }
@@ -229,17 +308,400 @@ void MainWindow::grayscale()
 
 void MainWindow::duotone_start()
 {
+    if (psd_manager.get_image().n_channels != 1)
+    {
+        QToolTip::showText(
+            ui->button_duotone_preview->mapToGlobal(QPoint(0, 0)),
+            "A grayscaled 1 channel image is expected for this action",
+            ui->button_duotone_preview);
+        return;
+    }
+
     duotone_visibility_ctx.start_preview();
+    duotone_try(duotone_split_ctx.get_last());
+}
+
+void MainWindow::duotone_try(int value)
+{
+    Duotone* duotone = (Duotone*)processors[DUOTONE].get();
+
+    duotone->set_split_value(value);
+    if (duotone->process(psd_manager.get_image().get_raw()))
+        draw_image(duotone->get_preview());
 }
 
 void MainWindow::duotone_done()
 {
-    qDebug("duotone done");
     duotone_visibility_ctx.end_preview();
+
+    Duotone* duotone = (Duotone*)processors[DUOTONE].get();
+    psd_manager.get_image().get_raw() = duotone->get_preview();
+    duotone->clear_preview();
+
+    draw_image();
+
+    unsigned split_value = duotone->get_split_value();
+
+    if (!proc_history.size() || proc_history.back()->type != DUOTONE ||
+        ((ThresholdActionCtx*)proc_history.back().get())->threshold != split_value)
+        proc_history.emplace_back(new ThresholdActionCtx(DUOTONE,
+            split_value));
+
+    ++proc_history.back()->count;
+
+    history_ctx.add(*proc_history.back().get());
 }
 
 void MainWindow::duotone_cancel()
 {
-    qDebug("duotone cancel");
     duotone_visibility_ctx.end_preview();
+
+    ((Duotone*)processors[DUOTONE].get())->clear_preview();
+    draw_image();
+}
+
+void MainWindow::fill_holes()
+{
+    PsdData& img = psd_manager.get_image();
+
+    if (img.n_channels != 1)
+    {
+        QToolTip::showText(
+            ui->button_fill->mapToGlobal(QPoint(0, 0)),
+            "A duotone 1 channel image is expected for this action",
+            ui->button_fill);
+        return;
+    }
+
+    Fill* fill = (Fill*)processors[FILL].get();
+
+    fill->set_color(0);
+    if (!fill->process(img.get_raw()))
+        return;
+
+    draw_image();
+
+    if (!proc_history.size() || proc_history.back()->type != FILL)
+        proc_history.emplace_back(new ProcCtx(FILL));
+    ++proc_history.back()->count;
+
+    history_ctx.add(*proc_history.back().get());
+}
+
+void MainWindow::thin_letter(BorderSide side)
+{
+    PsdData& img = psd_manager.get_image();
+
+    if (img.n_channels != 1)
+    {
+        QToolTip::showText(
+            ui->button_fill->mapToGlobal(QPoint(0, 0)),
+            "A duotone 1 channel image is expected for this action",
+            ui->button_fill);
+        return;
+    }
+
+    ProcessorType type = ui->radioButton_thin->isChecked() ?
+        THIN : IRREG_CLEANUP;
+
+    DirectionalPrcessor* proc = (DirectionalPrcessor*)processors[type].get();
+
+    proc->set_side(side);
+    if (!proc->process(img.get_raw()))
+        return;
+
+    draw_image();
+
+    if (!proc_history.size() || proc_history.back()->type != type ||
+        ((DirectionalActionCtx*)proc_history.back().get())->side != side)
+        proc_history.emplace_back(new DirectionalActionCtx(type, side));
+    ++proc_history.back()->count;
+
+    history_ctx.add(*proc_history.back().get());
+}
+
+void MainWindow::thin_top()
+{
+    thin_letter(BorderSide::TOP);
+}
+
+void MainWindow::thin_right()
+{
+    thin_letter(BorderSide::RIGHT);
+}
+
+void MainWindow::thin_bottom()
+{
+    thin_letter(BorderSide::BOTTOM);
+}
+
+void MainWindow::thin_left()
+{
+    thin_letter(BorderSide::LEFT);
+}
+
+void MainWindow::trace_letters()
+{
+    PsdData& img = psd_manager.get_image();
+
+    if (img.n_channels != 1)
+    {
+        QToolTip::showText(
+            ui->button_fill->mapToGlobal(QPoint(0, 0)),
+            "A duotone 1 channel image is expected for this action",
+            ui->button_fill);
+        return;
+    }
+
+    LetterFinder* proc = (LetterFinder*)processors[TRACE_LETTERS].get();
+    clear_meta_layer();
+    proc->clear();
+    size_t last_size = 0;
+    auto& letters = proc->get_letters();
+
+    while (proc->process(img.get_raw()))
+    {
+        proc->process(img.get_raw());
+
+        if (last_size == letters.size())
+            continue;
+
+        last_size = letters.size();
+        const LetterData& l = letters.back();
+
+        draw_append_meta(l);
+        qDebug("found a letter at x:%d-%d, y:%d-%d\n",
+            l.top_left.x, l.bottom_right.x, l.top_left.y, l.bottom_right.y);
+    }
+
+    QMessageBox::information(this, tr("Letters tracing"),
+        tr("Letters tracing is complete"));
+}
+
+void MainWindow::import_history()
+{
+    QString file_name = QFileDialog::getOpenFileName(this,
+        tr("Import image preprocessing"), "", tr("Image Pre-Processing (*.ipp)"));
+    if (file_name.isEmpty())
+        return;
+
+    FILE* file = fopen(file_name.toLocal8Bit().data(), "rb");
+    if (!file)
+    {
+        QMessageBox::warning(this, tr("Error opening file"),
+            tr("An error occured while opening selected file."),
+            QMessageBox::Ok);
+        return;
+    }
+
+    size_t size = 0;
+    if (!fread(&size, sizeof(size), 1, file))
+    {
+        QMessageBox::warning(this, tr("Error reading from file"),
+            tr("An error occured while reading from selected file."),
+            QMessageBox::Ok);
+        fclose(file);
+        return;
+    }
+
+    if (!size)
+    {
+        QMessageBox::information(this, tr("No action in the file"),
+            tr("Selected file doesn't contain any preprocessing actions."));
+        fclose(file);
+        return;
+    }
+
+    proc_history.clear();
+    history_ctx.clear();
+
+    for (unsigned i = 0; i < size; ++i)
+    {
+        ProcCtx ctx = ProcCtx::deserialize(file);
+
+        switch (ctx.type)
+        {
+        case DUOTONE:
+            proc_history.emplace_back(new ThresholdActionCtx(ctx.type, file));
+            break;
+        case FILL:
+            proc_history.emplace_back(new ProcCtx(ctx.type));
+            break;
+        case THIN: // fallthrough
+        case IRREG_CLEANUP:
+            proc_history.emplace_back(new DirectionalActionCtx(ctx.type, file));
+            break;
+        default:
+            QMessageBox::warning(this, tr("Error reading from file"),
+                tr("File contains unknown actions."),
+                QMessageBox::Ok);
+            fclose(file);
+            return;
+        }
+
+        proc_history.back()->count = ctx.count;
+        history_ctx.add(*proc_history.back().get());
+    }
+
+    fclose(file);
+
+    reapply_history();
+}
+
+void MainWindow::export_history()
+{
+    QString file_name = QFileDialog::getSaveFileName(this,
+        tr("Export image preprocessing"), "", tr("Image Pre-Processing (*.ipp)"));
+    if (file_name.isEmpty())
+        return;
+
+    FILE* file = fopen(file_name.toLocal8Bit().data(), "wb");
+    if (!file)
+    {
+        QMessageBox::warning(this, tr("Error opening file"),
+            tr("An error occured while opening selected file."),
+            QMessageBox::Ok);
+        return;
+    }
+
+    auto size = proc_history.size();
+    fwrite(&size, sizeof(size), 1, file);
+
+    for (auto& action : proc_history)
+        action->serialize(file);
+
+    fclose(file);
+}
+
+void MainWindow::reapply_history()
+{
+    // TODO: would be way easier, if processing actions implemented
+    // "command" pattern
+
+    // reopen image to reset current processing
+    if (!psd_manager.open(psd_manager.get_path()))
+    {
+        QMessageBox::warning(this, tr("Error opening file"),
+            tr("An error occured while reopening image file."),
+            QMessageBox::Ok);
+        return;
+    }
+    clear_meta_layer();
+
+    if (psd_manager.get_image().n_channels > 1)
+        processors[GRAYSCALE]->process(psd_manager.get_image().get_raw());
+
+    for (auto& act : proc_history)
+    {
+
+        switch (act->type)
+        {
+        case DUOTONE:
+        {
+            Duotone* duotone = (Duotone*)processors[DUOTONE].get();
+            auto ctx = (ThresholdActionCtx*)act.get();
+            duotone->set_split_value(ctx->threshold);
+
+            duotone->process(psd_manager.get_image().get_raw());
+
+            psd_manager.get_image().get_raw() = duotone->get_preview();
+            duotone->clear_preview();
+        }
+            break;
+        case FILL:
+        {
+            Fill* fill = (Fill*)processors[FILL].get();
+
+            fill->set_color(0);
+            fill->process(psd_manager.get_image().get_raw());
+        }
+            break;
+        case THIN: // fallthrough
+        case IRREG_CLEANUP:
+        {
+            auto ctx = (DirectionalActionCtx*)act.get();
+            auto proc = (DirectionalPrcessor*)processors[ctx->type].get();
+
+            proc->set_side(ctx->side);
+            proc->process(psd_manager.get_image().get_raw());
+        }
+            break;
+        default:
+            QMessageBox::warning(this, tr("Error applying history"),
+                tr("An error occured while applying history from the file."),
+                QMessageBox::Ok);
+            // TODO: what should happen here?
+            return;
+        }
+    }
+
+    draw_image();
+}
+
+// utility impl
+namespace ui_context {
+    static void side_to_str(BorderSide side, std::stringstream& ss)
+    {
+        switch (side) {
+        case BorderSide::TOP:
+            ss << "top";
+            break;
+        case BorderSide::RIGHT:
+            ss << "right";
+            break;
+        case BorderSide::BOTTOM:
+            ss << "bottom";
+            break;
+        case BorderSide::LEFT:
+            ss << "left";
+            break;
+        default:
+            break;
+        }
+    }
+
+    static void proc_to_str(const ProcCtx* ctx, std::stringstream& ss)
+    {
+        switch (ctx->type)
+        {
+        case DUOTONE:
+            ss << "Duotone, " << ((ThresholdActionCtx*)ctx)->threshold;
+            break;
+        case FILL:
+            ss << "Fill holes";
+            break;
+        case THIN:
+            ss << "Thin, ";
+            side_to_str(((DirectionalActionCtx*)ctx)->side, ss);
+            break;
+        case IRREG_CLEANUP:
+            ss << "Cleanup, ";
+            side_to_str(((DirectionalActionCtx*)ctx)->side, ss);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void ProcHistoryManager::add(const ProcCtx& ctx)
+{
+    std::stringstream ss;
+
+    proc_to_str(&ctx, ss);
+
+    if (ctx.count > 1)
+    {
+        ss << ", " << ctx.count << " times";
+        list->removeLast();
+    }
+
+    list->append(ss.str().c_str());
+    model->setStringList(*list);
+}
+
+void ProcHistoryManager::clear()
+{
+    list->clear();
+    model->setStringList(*list);
 }
