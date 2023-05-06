@@ -9,7 +9,6 @@ using BorderSide = PixelView_3x3::BorderSide;
 
 enum ProcessorType
 {
-    TEST_RED_80_PERCENT,
     GRAYSCALE,
     DUOTONE,
     FILL,

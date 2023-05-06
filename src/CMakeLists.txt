@@ -28,8 +28,6 @@ set(PROCESSING_SOURCES
     processing/pixel_view.h
     processing/pixel_view.cpp
 
-    processing/processors/test_make_red_proc.h
-    processing/processors/test_make_red_proc.cpp
     processing/processors/grayscale.cpp
     processing/processors/duotone.cpp
     processing/processors/fill.cpp

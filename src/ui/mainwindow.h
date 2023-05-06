@@ -28,7 +28,6 @@ public slots:
     void save_file();
     void save_file_as();
 
-    void test_set_red_80();
     void grayscale();
     void duotone_start();
     void duotone_try(int);

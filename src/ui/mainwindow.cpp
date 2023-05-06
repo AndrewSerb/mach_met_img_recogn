@@ -7,7 +7,6 @@
 
 #include "./ui_mainwindow.h"
 #include "../processing/common_processors.h"
-#include "../processing/processors/test_make_red_proc.h"
 
 #include "utility_ctx.h"
 
@@ -86,7 +85,6 @@ MainWindow::MainWindow(QWidget *parent)
     history_ctx.list = &history_strs;
     history_ctx.model = history_str_model;
 
-    processors.emplace(TEST_RED_80_PERCENT, new MakeRed80Percent());
     processors.emplace(GRAYSCALE, new Grayscale());
     processors.emplace(DUOTONE, new Duotone());
     processors.emplace(FILL, new Fill());
@@ -148,9 +146,6 @@ MainWindow::MainWindow(QWidget *parent)
         this, &MainWindow::save_file_as);
 
     // == processing events
-    // testing action
-    QObject::connect(ui->actionTest_Set_Red, &QAction::triggered,
-        this, &MainWindow::test_set_red_80);
     // grayscale
     QObject::connect(ui->button_grayscale, &QAbstractButton::pressed,
         this, &MainWindow::grayscale);
@@ -262,8 +257,6 @@ void MainWindow::open_file()
 
     visibility_ctx.img_opened();
 
-    ui->actionTest_Set_Red->setEnabled(true);
-
     return;
 }
 
@@ -287,13 +280,6 @@ void MainWindow::save_file_as()
 }
 
 // preprocessing
-
-void MainWindow::test_set_red_80()
-{
-    PsdData& img = psd_manager.get_image();
-    if (processors[TEST_RED_80_PERCENT]->process(img.get_raw()))
-        draw_image();
-}
 
 void MainWindow::grayscale()
 {
