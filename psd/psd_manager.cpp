@@ -1,5 +1,10 @@
 #include "psd_manager.h"
 
+PsdData::PsdData() : image(), n_channels(image.n_channels),
+    width(image.width), height(image.height),
+    channels_data(image.channels_data)
+{}
+
 bool PsdManager::open(const char* filepath)
 {
     FILE* file = fopen(filepath, "rb");

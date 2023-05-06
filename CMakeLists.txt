@@ -13,9 +13,29 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
 set(UI_SOURCES
+    ui/utility_ctx.h
+    ui/proc_ctx.h
+    ui/proc_ctx.cpp
     ui/mainwindow.cpp
     ui/mainwindow.h
     ui/mainwindow.ui
+)
+
+set(PROCESSING_SOURCES
+    processing/image.h
+    processing/processor_api.h
+    processing/common_processors.h
+    processing/pixel_view.h
+    processing/pixel_view.cpp
+
+    processing/processors/test_make_red_proc.h
+    processing/processors/test_make_red_proc.cpp
+    processing/processors/grayscale.cpp
+    processing/processors/duotone.cpp
+    processing/processors/fill.cpp
+    processing/processors/thin_letters.cpp
+    processing/processors/irreg_cleanup.cpp
+    processing/processors/letter_finder.cpp
 )
 
 set(PSD_SOURCES
@@ -25,9 +45,10 @@ set(PSD_SOURCES
 )
 
 set(PROJECT_SOURCES
-        ${PSD_SOURCES}
-        ${UI_SOURCES}
-        main.cpp
+    ${PROCESSING_SOURCES}
+    ${PSD_SOURCES}
+    ${UI_SOURCES}
+    main.cpp
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
