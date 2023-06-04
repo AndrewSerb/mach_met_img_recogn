@@ -105,6 +105,8 @@ struct LetterData
     Point bottom_right;
 
     std::unordered_set<unsigned> pixels_idxs;
+    std::vector<int> horizontal_lines;
+    std::vector<int> vertical_lines;
 
     LetterData() = default;
 
