@@ -107,6 +107,16 @@ struct LetterData
     std::unordered_set<unsigned> pixels_idxs;
 
     LetterData() = default;
+
+    size_t width() const
+    {
+        return bottom_right.x - top_left.x;
+    }
+
+    size_t height() const
+    {
+        return bottom_right.y - top_left.y;
+    }
 };
 
 class LetterFinder : public ImageProcessor

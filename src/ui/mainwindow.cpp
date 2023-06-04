@@ -218,9 +218,10 @@ void MainWindow::draw_append_meta(const LetterData& letter)
     QPainter painter(&meta_layer);
 
     painter.setPen(QPen(Qt::red));
-    painter.drawRect(letter.top_left.x, letter.top_left.y,
-        letter.bottom_right.x - letter.top_left.x,
-        letter.bottom_right.y - letter.top_left.y);
+    // draw around the letter
+    painter.drawRect(letter.top_left.x - 1, letter.top_left.y - 1,
+        letter.width() + 2,
+        letter.height() + 2);
 
     draw_image();
 }

@@ -70,7 +70,7 @@
           <property name="currentIndex">
            <number>0</number>
           </property>
-          <widget class="QWidget" name="tab_preprocessing">
+          <widget class="QWidget" name="tab_image_preprocessing">
            <property name="enabled">
             <bool>true</bool>
            </property>
@@ -79,7 +79,7 @@
              <x>0</x>
              <y>0</y>
              <width>316</width>
-             <height>647</height>
+             <height>617</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -89,7 +89,7 @@
             </sizepolicy>
            </property>
            <attribute name="label">
-            <string>Preprocessing</string>
+            <string>Image preprocessing</string>
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_preprocessing" stretch="0,0,0,10">
             <item>
@@ -368,13 +368,6 @@
                  </layout>
                 </widget>
                </item>
-               <item>
-                <widget class="QPushButton" name="button_trace_letters">
-                 <property name="text">
-                  <string>Trace letters</string>
-                 </property>
-                </widget>
-               </item>
               </layout>
              </widget>
             </item>
@@ -392,7 +385,14 @@
                 </widget>
                </item>
                <item>
-                <widget class="QListView" name="listView"/>
+                <widget class="QListView" name="listView">
+                 <property name="editTriggers">
+                  <set>QAbstractItemView::NoEditTriggers</set>
+                 </property>
+                 <property name="showDropIndicator" stdset="0">
+                  <bool>false</bool>
+                 </property>
+                </widget>
                </item>
                <item>
                 <widget class="QPushButton" name="button_export_history">
@@ -406,6 +406,108 @@
             </item>
             <item>
              <widget class="QWidget" name="widget_spacer_preprocessing" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_text_processing">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>330</width>
+             <height>433</height>
+            </rect>
+           </property>
+           <attribute name="label">
+            <string>Text processing</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_8" stretch="0,0,10">
+            <item>
+             <widget class="QPushButton" name="button_trace_letters">
+              <property name="text">
+               <string>Trace letters</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_letter">
+              <property name="title">
+               <string>Letters</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_9">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QGroupBox" name="groupBox_letter_metrics">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="title">
+                  <string>Metrics</string>
+                 </property>
+                 <layout class="QVBoxLayout" name="verticalLayout_10">
+                  <item>
+                   <layout class="QFormLayout" name="formLayout">
+                    <property name="sizeConstraint">
+                     <enum>QLayout::SetDefaultConstraint</enum>
+                    </property>
+                    <property name="fieldGrowthPolicy">
+                     <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+                    </property>
+                    <property name="rowWrapPolicy">
+                     <enum>QFormLayout::DontWrapRows</enum>
+                    </property>
+                    <item row="0" column="0">
+                     <widget class="QLabel" name="label_hor_groups">
+                      <property name="text">
+                       <string>Horizontal groups</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QLabel" name="label_hor_gr_num">
+                      <property name="text">
+                       <string>0</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="0">
+                     <widget class="QLabel" name="label_vert_groups">
+                      <property name="text">
+                       <string>Vertiical groups</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="1">
+                     <widget class="QLabel" name="label_vert_groups_num">
+                      <property name="text">
+                       <string>0</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QWidget" name="widget_spacer_processing" native="true"/>
             </item>
            </layout>
           </widget>
