@@ -1,6 +1,7 @@
 #ifndef COMMON_PROCESSORS_H
 #define COMMON_PROCESSORS_H
 
+#include <map>
 #include <unordered_set>
 
 #include "processor_api.h"
@@ -101,12 +102,14 @@ private:
 
 struct LetterData
 {
+    using LinesMetrics = std::pair<std::vector<int>, std::vector<int>>;
+
     Point top_left;
     Point bottom_right;
 
     std::unordered_set<unsigned> pixels_idxs;
-    std::vector<int> horizontal_lines;
-    std::vector<int> vertical_lines;
+    LinesMetrics metrics;
+    std::multimap<double, char> similarity_values;
 
     LetterData() = default;
 
@@ -118,6 +121,13 @@ struct LetterData
     size_t height() const
     {
         return bottom_right.y - top_left.y;
+    }
+
+    char charachter() const
+    {
+        // values are sorted in ascending order
+        // so the last one is the most probable character
+        return similarity_values.rbegin()->second;
     }
 };
 

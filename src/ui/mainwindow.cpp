@@ -715,8 +715,8 @@ static QString metrics_to_str(const std::vector<int> vec)
 
 void LetterInfoCtx::apply_info(const LetterData& letter)
 {
-    label_hor_cnt->setText(metrics_to_str(letter.horizontal_lines));
-    label_vert_cnt->setText(metrics_to_str(letter.vertical_lines));
+    label_hor_cnt->setText(metrics_to_str(letter.metrics.first));
+    label_vert_cnt->setText(metrics_to_str(letter.metrics.second));
 }
 
 void LetterInfoCtx::clear_info()
