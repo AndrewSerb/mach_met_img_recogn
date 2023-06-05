@@ -482,6 +482,9 @@
                       <property name="text">
                        <string>0</string>
                       </property>
+                      <property name="textInteractionFlags">
+                       <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+                      </property>
                      </widget>
                     </item>
                     <item row="1" column="0">
@@ -495,6 +498,9 @@
                      <widget class="QLabel" name="label_vert_groups_num">
                       <property name="text">
                        <string>0</string>
+                      </property>
+                      <property name="textInteractionFlags">
+                       <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
                       </property>
                      </widget>
                     </item>

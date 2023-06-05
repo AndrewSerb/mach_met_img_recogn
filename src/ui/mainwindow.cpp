@@ -677,7 +677,8 @@ void ProcHistoryManager::add(const ProcCtx& ctx)
     if (ctx.count > 1)
     {
         ss << ", " << ctx.count << " times";
-        list->removeLast();
+        if (list->size())
+            list->removeLast();
     }
 
     list->append(ss.str().c_str());
