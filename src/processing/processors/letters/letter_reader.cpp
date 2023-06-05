@@ -2,7 +2,7 @@
 
 namespace LetterReader
 {
-
+// TODO: try some other, more imvolved algorithms. this one is just a brick
 static size_t hamming_distance(const std::vector<int>& v1, const std::vector<int>& v2)
 {
     size_t dist = 0;

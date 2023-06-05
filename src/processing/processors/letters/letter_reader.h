@@ -9,6 +9,7 @@ namespace LetterReader
 {
 constexpr double LONG_PERCENTAGE = 0.8;
 
+// TODO: these don't seem to be good enough
 static const std::unordered_map<char, LetterData::LinesMetrics> etalons = {
     {'.', {{1, -1, 1}, {1, -1, 1}}},
 

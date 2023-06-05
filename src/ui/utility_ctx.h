@@ -187,10 +187,14 @@ struct LetterInfoCtx
 {
     QLabel* label_hor_cnt = nullptr;
     QLabel* label_vert_cnt = nullptr;
+    class QFormLayout* similarity_layout = nullptr;
     class LetterRect* last_pressed = nullptr;
 
     void apply_info(const class LetterData& letter);
     void clear_info();
+
+private:
+    void clear_layout();
 };
 
 }
