@@ -2,7 +2,7 @@
 #define UTILITY_CTX_H
 
 #include "qabstractbutton.h"
-#include "qgraphicsitem.h"
+#include "qgraphicsview.h"
 #include "qlabel.h"
 #include "qslider.h"
 #include "qspinbox.h"
@@ -22,7 +22,7 @@ public:
     QSpinBox* spinbox = nullptr;
     QSlider* slider = nullptr;
 
-    SliderSpinboxSyncCtx(int min, int max, int default_value)
+    SliderSpinboxSyncCtx(double min, double max, double default_value)
     {
         if (min > max)
         {
@@ -45,27 +45,27 @@ public:
         last_value = default_value;
     }
 
-    inline int get_min() const
+    inline double get_min() const
     {
         return min;
     }
 
-    inline int get_max() const
+    inline double get_max() const
     {
         return max;
     }
 
-    inline int get_default_value() const
+    inline double get_default_value() const
     {
         return default_value;
     }
 
-    inline int get_last() const
+    inline double get_last() const
     {
         return last_value;
     }
 
-    Q_SLOT virtual void sync(int value)
+    Q_SLOT virtual void sync(double value)
     {
         if (value > max)
             value = max;
@@ -80,31 +80,32 @@ public:
         emit value_changed(value);
     }
 
-    Q_SIGNAL void value_changed(int);
+    Q_SIGNAL void value_changed(double);
 
-private:
-    int min;
-    int max;
-    int default_value;
-    int last_value;
+protected:
+    double min;
+    double max;
+    double default_value;
+    double last_value;
 };
 
 struct PixmapScaleCtx : public SliderSpinboxSyncCtx
 {
     Q_OBJECT
 public:
-    PixmapScaleCtx(int min, int max, int default_value)
+    PixmapScaleCtx(double min, double max, double default_value)
         : SliderSpinboxSyncCtx(min, max, default_value)
     {}
 
-    inline void sync(int value) Q_DECL_OVERRIDE
+    inline void sync(double value) Q_DECL_OVERRIDE
     {
+        auto last_val = last_value == 1 ? 1 : last_value;
         SliderSpinboxSyncCtx::sync(value);
-
-        (*pixmap)->setScale(value);// TODO: works a bit weird
+        view->scale(value / last_val, value / last_val);
     }
 
     QGraphicsPixmapItem** pixmap;
+    QGraphicsView* view;
 };
 
 struct
@@ -180,6 +181,16 @@ struct ProcHistoryManager
 
     void add(const ProcCtx&);
     void clear();
+};
+
+struct LetterInfoCtx
+{
+    QLabel* label_hor_cnt = nullptr;
+    QLabel* label_vert_cnt = nullptr;
+    class LetterRect* last_pressed = nullptr;
+
+    void apply_info(const class LetterData& letter);
+    void clear_info();
 };
 
 }

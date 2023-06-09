@@ -15,6 +15,7 @@ using namespace ui_context;
 static SliderSpinboxSyncCtx duotone_split_ctx(0, 255, 127);
 static PixmapScaleCtx scale_ctx(1, 100, 1);
 static ProcHistoryManager history_ctx;
+static LetterInfoCtx letter_info_ctx;
 
 // ===== local ImageData to Qt's QRgb struct mappers =====
 typedef QRgb (*rgb_mapper)(const ImageData& img, uint64_t idx);
@@ -73,8 +74,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
     ui(new Ui::MainWindow),
     image(),
-    img_pixmap_item(img_scene.addPixmap(QPixmap::fromImage(image))),
-    meta_layer(image)
+    img_pixmap_item(img_scene.addPixmap(QPixmap::fromImage(image)))
 {
     ui->setupUi(this);
 
@@ -94,7 +94,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     scale_ctx.slider = ui->slider_scale;
     scale_ctx.spinbox = ui->spinbox_scale;
-    scale_ctx.pixmap = &img_pixmap_item;
+    scale_ctx.view = ui->image_box;
 
     scale_ctx.spinbox->setMinimum(scale_ctx.get_min());
     scale_ctx.spinbox->setMaximum(scale_ctx.get_max());
@@ -125,6 +125,9 @@ MainWindow::MainWindow(QWidget *parent)
     img_info_ctx.label_height = ui->label_height_data;
     img_info_ctx.label_depth = ui->label_depth_data;
     img_info_ctx.label_channels = ui->label_channels_data;
+
+    letter_info_ctx.label_hor_cnt = ui->label_hor_gr_num;
+    letter_info_ctx.label_vert_cnt = ui->label_vert_groups_num;
 
     // utility contexts
     QObject::connect(scale_ctx.slider, &QSlider::valueChanged,
@@ -194,13 +197,10 @@ void MainWindow::draw_image(const ImageData& raw_img)
     if (image.height() != raw_img.height || image.width() != raw_img.width)
     {
         image = QImage(raw_img.width, raw_img.height, QImage::Format_ARGB32);
-        clear_meta_layer();
+        clear_letter_meta();
     }
 
     map_image(raw_img, image);
-
-    QPainter painter(&image);
-    painter.drawImage(0, 0, meta_layer);
 
     img_scene.clear();
     img_pixmap_item = img_scene.addPixmap(QPixmap::fromImage(image));
@@ -213,22 +213,21 @@ void MainWindow::draw_image(const ImageData& raw_img)
     ui->image_box->repaint();
 }
 
-void MainWindow::draw_append_meta(const LetterData& letter)
+void MainWindow::add_letter_meta(const LetterData& letter)
 {
-    QPainter painter(&meta_layer);
-
-    painter.setPen(QPen(Qt::red));
-    painter.drawRect(letter.top_left.x, letter.top_left.y,
-        letter.bottom_right.x - letter.top_left.x,
-        letter.bottom_right.y - letter.top_left.y);
-
-    draw_image();
+    LetterRect* lr = new LetterRect(letter);
+    img_scene.addItem(lr);
+    letters_meta.push_back(lr);
 }
 
-void MainWindow::clear_meta_layer()
+void MainWindow::clear_letter_meta()
 {
-    meta_layer = QImage(image.width(), image.height(), QImage::Format_ARGB32);
-    meta_layer.fill(Qt::transparent);
+    for (auto letter : letters_meta)
+    {
+        img_scene.removeItem(letter);
+    }
+    letters_meta.clear();
+    letter_info_ctx.clear_info();
 }
 
 void MainWindow::draw_image()
@@ -252,7 +251,7 @@ void MainWindow::open_file()
     }
     proc_history.clear();
     history_ctx.clear();
-    clear_meta_layer();
+    clear_letter_meta();
     draw_image();
 
     visibility_ctx.img_opened();
@@ -440,8 +439,7 @@ void MainWindow::trace_letters()
     }
 
     LetterFinder* proc = (LetterFinder*)processors[TRACE_LETTERS].get();
-    clear_meta_layer();
-    proc->clear();
+    clear_letter_meta();
     size_t last_size = 0;
     auto& letters = proc->get_letters();
 
@@ -453,12 +451,12 @@ void MainWindow::trace_letters()
             continue;
 
         last_size = letters.size();
-        const LetterData& l = letters.back();
+        const LetterData& l = proc->last_letter();
 
-        draw_append_meta(l);
-        qDebug("found a letter at x:%d-%d, y:%d-%d\n",
-            l.top_left.x, l.bottom_right.x, l.top_left.y, l.bottom_right.y);
+        add_letter_meta(l);
     }
+
+    proc->clear();
 
     QMessageBox::information(this, tr("Letters tracing"),
         tr("Letters tracing is complete"));
@@ -572,7 +570,7 @@ void MainWindow::reapply_history()
             QMessageBox::Ok);
         return;
     }
-    clear_meta_layer();
+    clear_letter_meta();
 
     if (psd_manager.get_image().n_channels > 1)
         processors[GRAYSCALE]->process(psd_manager.get_image().get_raw());
@@ -690,4 +688,71 @@ void ProcHistoryManager::clear()
 {
     list->clear();
     model->setStringList(*list);
+}
+
+// Letters info
+const QPen LetterRect::red = QPen(Qt::red);
+const QPen LetterRect::green = QPen(Qt::green);
+
+static QString metrics_to_str(const std::vector<int> vec)
+{
+    if (!vec.size())
+        return "0";
+
+    QString res;
+
+    res.append(std::to_string(vec[0]).c_str());
+
+    for (int i = 1; i < vec.size(); ++i)
+    {
+        res += ", ";
+        res += std::to_string(vec[i]).c_str();
+    }
+
+    return res;
+}
+
+void LetterInfoCtx::apply_info(const LetterData& letter)
+{
+    label_hor_cnt->setText(metrics_to_str(letter.horizontal_lines));
+    label_vert_cnt->setText(metrics_to_str(letter.vertical_lines));
+}
+
+void LetterInfoCtx::clear_info()
+{
+    label_hor_cnt->setText("0");
+    label_vert_cnt->setText("0");
+    last_pressed = nullptr;
+}
+
+LetterRect::LetterRect(const class LetterData& letter)
+    : letter(letter), pen(red)
+{}
+
+QRectF LetterRect::boundingRect() const
+{
+    return QRectF(letter.top_left.x, letter.top_left.y,
+        letter.width(), letter.height());
+}
+
+void LetterRect::paint(QPainter* painter, const QStyleOptionGraphicsItem*, QWidget*)
+{
+    QRectF rect(letter.top_left.x - 1, letter.top_left.y - 1,
+        letter.width() + 2, letter.height() + 2);
+
+    painter->setPen(pen);
+    painter->drawRect(rect);
+}
+
+void LetterRect::mousePressEvent(QGraphicsSceneMouseEvent* e)
+{
+    pen = green;
+
+    if (letter_info_ctx.last_pressed && letter_info_ctx.last_pressed != this)
+        letter_info_ctx.last_pressed->pen = red;
+
+    letter_info_ctx.last_pressed = this;
+    letter_info_ctx.apply_info(letter);
+
+    update();
 }

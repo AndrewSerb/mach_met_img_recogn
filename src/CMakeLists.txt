@@ -34,6 +34,9 @@ set(PROCESSING_SOURCES
     processing/processors/thin_letters.cpp
     processing/processors/irreg_cleanup.cpp
     processing/processors/letter_finder.cpp
+
+    processing/processors/letters/letter_reader.h
+    processing/processors/letters/letter_reader.cpp
 )
 
 set(PSD_SOURCES

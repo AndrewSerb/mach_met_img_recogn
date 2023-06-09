@@ -1,5 +1,7 @@
 #include "../common_processors.h"
 
+#include "letters/letter_reader.h"
+
 LetterFinder::LetterFinder() : color(BLACK), idx(0)
 {}
 
@@ -87,7 +89,10 @@ bool LetterFinder::process(ImageData& image)
         return false;
 
     if (pixels[idx] == color && !letters_contain(letters, idx))
+    {
         trace_letter(letters, image, idx, color);
+        LetterReader::detect(letters.back(), image);
+    }
 
     ++idx;
 

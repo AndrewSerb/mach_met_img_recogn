@@ -5,15 +5,36 @@
 #include <QMainWindow>
 #include <QGraphicsPixmapItem>
 #include <QStringListModel>
+#include <QGraphicsSceneMouseEvent>
 
 #include "../psd/psd_manager.h"
 #include "../processing/processor_api.h"
+#include "../processing/common_processors.h"
 
 #include "proc_ctx.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
+
+class LetterRect : public QGraphicsItem
+{
+public:
+    LetterRect(const LetterData&);
+
+    QRectF boundingRect() const;
+
+    void paint(QPainter*, const QStyleOptionGraphicsItem*, QWidget*);
+
+protected:
+    static const QPen red;
+    static const QPen green;
+
+    const LetterData letter;
+    QPen pen;
+
+    void mousePressEvent(QGraphicsSceneMouseEvent*);
+};
 
 class MainWindow : public QMainWindow
 {
@@ -47,7 +68,6 @@ private:
     Ui::MainWindow *ui;
 
     QImage image;
-    QImage meta_layer;
     QGraphicsScene img_scene;
     QGraphicsPixmapItem* img_pixmap_item;
     QStringListModel* history_str_model;
@@ -57,16 +77,15 @@ private:
 
     std::map<ProcessorType, std::unique_ptr<ImageProcessor>> processors;
     std::list<std::unique_ptr<ProcCtx>> proc_history;
+    std::vector<LetterRect*> letters_meta;
 
     void draw_image();
     void draw_image(const ImageData&);
-    void draw_append_meta(const class LetterData& letter);
-    void clear_meta_layer();
+    void add_letter_meta(const class LetterData& letter);
+    void clear_letter_meta();
 
     void thin_letter(BorderSide);
 
     void reapply_history();
-
-
 };
 #endif // MAIN_WINDOW_H
