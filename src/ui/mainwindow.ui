@@ -421,7 +421,7 @@
            <attribute name="label">
             <string>Text processing</string>
            </attribute>
-           <layout class="QVBoxLayout" name="verticalLayout_8" stretch="0,0,10">
+           <layout class="QVBoxLayout" name="verticalLayout_8" stretch="0,0,0,10">
             <item>
              <widget class="QPushButton" name="button_trace_letters">
               <property name="text">
@@ -482,6 +482,9 @@
                       <property name="text">
                        <string>0</string>
                       </property>
+                      <property name="textInteractionFlags">
+                       <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+                      </property>
                      </widget>
                     </item>
                     <item row="1" column="0">
@@ -496,12 +499,27 @@
                       <property name="text">
                        <string>0</string>
                       </property>
+                      <property name="textInteractionFlags">
+                       <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+                      </property>
                      </widget>
                     </item>
                    </layout>
                   </item>
                  </layout>
                 </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_letter_similarity">
+              <property name="title">
+               <string>Characters similarity</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_11">
+               <item>
+                <layout class="QFormLayout" name="layout_letter_similarity"/>
                </item>
               </layout>
              </widget>

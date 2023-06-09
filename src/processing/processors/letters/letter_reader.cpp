@@ -2,6 +2,38 @@
 
 namespace LetterReader
 {
+// TODO: try some other, more imvolved algorithms. this one is just a brick
+static size_t hamming_distance(const std::vector<int>& v1, const std::vector<int>& v2)
+{
+    size_t dist = 0;
+    size_t proc_size = std::min(v1.size(), v2.size());
+
+    for (size_t i = 0; i < proc_size; ++i)
+        if (v1[i] == v2[i])
+            ++dist;
+
+    return dist;
+}
+
+static size_t (*metrics_compare)(const std::vector<int>&,
+    const std::vector<int>&) = hamming_distance;
+
+// returns similarity percentage, [0; 1]
+static double compare_letters(const LetterData::LinesMetrics& l1,
+    const LetterData::LinesMetrics& l2)
+{
+    size_t horizontal_dist = metrics_compare(l1.first, l2.first);
+    size_t vertical_dist = metrics_compare(l1.second, l2.second);
+
+    size_t sum = horizontal_dist + vertical_dist;
+    auto uh = std::max(l1.first.size(), l2.first.size()) +
+            std::max(l1.second.size(), l2.second.size());
+
+    return (horizontal_dist + vertical_dist) /
+        (double)(std::max(l1.first.size(), l2.first.size()) +
+        std::max(l1.second.size(), l2.second.size()));
+}
+
 static void add_group_count(std::vector<int>& vec, int num)
 {
     // only add unique new entries
@@ -72,7 +104,7 @@ static void proc_rows(LetterData& letter, const ImageData& image)
             groups_num = -1;
         }
 
-        add_group_count(letter.horizontal_lines, groups_num);
+        add_group_count(letter.metrics.first, groups_num);
     }
 
     return;
@@ -104,15 +136,24 @@ static void proc_cols(LetterData& letter, const ImageData& image)
             groups_num = -1;
         }
 
-        add_group_count(letter.vertical_lines, groups_num);
+        add_group_count(letter.metrics.second, groups_num);
     }
 
     return;
+}
+
+static void determine_chars(LetterData& letter)
+{
+    // compare letter with every available etalon
+    for (auto& etalon : etalons)
+        letter.similarity_values.insert({
+            compare_letters(letter.metrics, etalon.second), etalon.first});
 }
 
 void detect(LetterData& letter, const ImageData& image)
 {
     proc_rows(letter, image);
     proc_cols(letter, image);
+    determine_chars(letter);
 }
 }

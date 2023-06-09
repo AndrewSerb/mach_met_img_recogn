@@ -128,6 +128,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     letter_info_ctx.label_hor_cnt = ui->label_hor_gr_num;
     letter_info_ctx.label_vert_cnt = ui->label_vert_groups_num;
+    letter_info_ctx.similarity_layout = ui->layout_letter_similarity;
 
     // utility contexts
     QObject::connect(scale_ctx.slider, &QSlider::valueChanged,
@@ -677,7 +678,8 @@ void ProcHistoryManager::add(const ProcCtx& ctx)
     if (ctx.count > 1)
     {
         ss << ", " << ctx.count << " times";
-        list->removeLast();
+        if (list->size())
+            list->removeLast();
     }
 
     list->append(ss.str().c_str());
@@ -712,10 +714,26 @@ static QString metrics_to_str(const std::vector<int> vec)
     return res;
 }
 
+void LetterInfoCtx::clear_layout()
+{
+    int row_count = similarity_layout->rowCount();
+    for (int i = similarity_layout->rowCount(); i >= 0; --i)
+        similarity_layout->removeRow(i);
+}
+
 void LetterInfoCtx::apply_info(const LetterData& letter)
 {
-    label_hor_cnt->setText(metrics_to_str(letter.horizontal_lines));
-    label_vert_cnt->setText(metrics_to_str(letter.vertical_lines));
+    label_hor_cnt->setText(metrics_to_str(letter.metrics.first));
+    label_vert_cnt->setText(metrics_to_str(letter.metrics.second));
+
+    clear_layout();
+    for (auto entry = letter.similarity_values.crbegin();
+        entry != letter.similarity_values.crend();
+        ++entry)
+    {
+        similarity_layout->addRow(QString(entry->second),
+            new QLabel((std::to_string(entry->first * 100) + "%").c_str()));
+    }
 }
 
 void LetterInfoCtx::clear_info()
@@ -723,6 +741,7 @@ void LetterInfoCtx::clear_info()
     label_hor_cnt->setText("0");
     label_vert_cnt->setText("0");
     last_pressed = nullptr;
+    clear_layout();
 }
 
 LetterRect::LetterRect(const class LetterData& letter)
